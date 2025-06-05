@@ -6,6 +6,7 @@ on:
 jobs:
   wp_scan:
     runs-on: self-hosted
+
     env:
       DB_PASSWORD: ${{ secrets.IONUT_COTOLAN_DB_PASS }}
       WP_ADMIN_PASS: ${{ secrets.IONUT_COTOLAN_WP_ADMIN_PASS }}
@@ -54,12 +55,12 @@ jobs:
             db_data:
           EOF
 
-      - name: Start WordPress and MySQL with Docker Compose
+      - name: Start WordPress and MySQL
         run: docker-compose up -d
 
       - name: Wait for WordPress to be ready
         run: |
-          for i in {1..30}; do
+          for i in {1..60}; do
             echo "Checking WordPress on localhost:8000..."
             if curl -s http://localhost:8000/wp-login.php | grep "WordPress"; then
               echo "WordPress is up!"
@@ -76,9 +77,12 @@ jobs:
             sudo gem install wpscan
           fi
 
-      - name: Run WPScan scan
+      - name: Run WPScan scan (with API Token for full CVE output)
         run: |
-          wpscan --url http://localhost:8000 --enumerate vp,vt,u --random-user-agent || true
+          wpscan --url http://localhost:8000 \
+                 --enumerate vp,vt,u \
+                 --random-user-agent \
+                 --api-token ${{ secrets.IONUT_COTOLAN_WPSCAN_TOKEN }} || true
 
       - name: Shut down Docker Compose
         run: docker-compose down
